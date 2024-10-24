@@ -1,0 +1,44 @@
+#! /usr/bin/env python
+# -*- coding:utf-8 -*-
+
+from sensor_msgs.msg import NavSatFix
+import rospy
+import utm
+from std_msgs.msg import Float64
+import math
+
+class LLAtoUTM:
+
+    def __init__(self):
+        rospy.init_node("LLAtoUTM")
+        print('node start')
+        
+        # 토픽 발행하는것 #
+        self.gps1_lat_pub = rospy.Publisher("/gps1_lat", Float64, queue_size=1) # GPS1_latitude 토픽발행
+        self.gps1_lon_pub = rospy.Publisher("/gps1_lon", Float64, queue_size=1) # GPS1_logitude 토픽발행
+        self.UTM_gps1_x1_pub = rospy.Publisher("/utm_gps_x", Float64, queue_size=1) # GPS1_UTM_x1(동쪽) 토픽발행
+        self.UTM_gps1_y1_pub = rospy.Publisher("/utm_gps_y", Float64, queue_size=1) # GPS1_UTM_y1(북쪽) 토픽발행
+        
+                
+        # 토픽 받는 것 #
+        rospy.Subscriber("/ublox_gps/fix", NavSatFix, self.gps1_fix_callback,queue_size=1)
+
+        self.xx1 = self.yy1 = self.xx2 = self.yy2 = None
+
+    def gps1_fix_callback(self, gps1):
+        gps1_lat, gps1_lon = gps1.latitude, gps1.longitude
+        self.xx1, self.yy1, Z,Z_L = utm.from_latlon(gps1_lat, gps1_lon)
+        self.gps1_lat_pub.publish(gps1_lat)
+        self.gps1_lon_pub.publish(gps1_lon)
+        self.UTM_gps1_x1_pub.publish(self.xx1)
+        self.UTM_gps1_y1_pub.publish(self.yy1)
+        print("latitude", self.xx1)
+        print("longitude", self.yy1)
+
+
+if __name__ == '__main__':
+    try:
+        LLAtoUTM()
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Program terminated")

@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-  
+import rospy
+from sensor_msgs.msg import Imu
+from std_msgs.msg import Float32
+import tf
+import math
+
+class IMUHandler:
+    def __init__(self):
+        rospy.init_node('imu_heading_publisher', anonymous=True)
+        self.imu_sub = rospy.Subscriber("/handsfree/imu", Imu, self.imu_callback)
+        self.heading_pub = rospy.Publisher("/heading_angle", Float32, queue_size=50)
+
+    def imu_callback(self, imu_data):
+        orientation_q = imu_data.orientation
+        quaternion = (
+            orientation_q.x,
+            orientation_q.y,
+            orientation_q.z,
+            orientation_q.w
+        )
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        yaw = euler[2]  # Roll, Pitch, Yaw where Yaw is the third element
+        heading_msg = Float32()
+        heading_msg.data = yaw*180/math.pi+90
+        if yaw*180/math.pi+90 <0:
+            heading_msg.data = heading_msg.data+360
+        print ("heading : " , heading_msg)
+        self.heading_pub.publish(heading_msg)
+
+if __name__ == '__main__':
+    handler = IMUHandler()
+    rospy.spin()
+
